@@ -36,6 +36,7 @@
 			import com.era7.communication.managers.UploadManager;
 			import com.era7.communication.xml.Request;
 			import com.era7.communication.xml.Response;
+			import com.era7.util.events.SearchBarEvent;
 			
 			import flash.net.navigateToURL;
 			
@@ -75,6 +76,46 @@
 				
 				blastMapper = new BlastMapper();			
 				
+				proteinsSearchBar.addEventListener(SearchBarEvent.SEARCH,onSearchProtein);
+				proteinsSearchBar.addEventListener(SearchBarEvent.GO_TO_ELEMENT,onGoToElementProtein);
+				
+			}
+			
+			protected function onSearchProtein(event:SearchBarEvent):void{
+				var items:XMLList = xml.protein;
+				
+				var results:Array = new Array();
+				var list:XMLList = new XMLList();
+				
+				var selectedField:String = String(proteinsSearchComboBox.selectedItem);
+				
+				if(selectedField == "ID"){
+					list = XMLList(items.((child("id")).text().toUpperCase().indexOf(event.getSearchText().toUpperCase()) >=0 ));
+				}else if(selectedField == "Length"){
+					list = XMLList(items.((child("length")).text().toUpperCase().indexOf(event.getSearchText().toUpperCase()) >=0 ));
+				}else if(selectedField == "Number of Isotigs"){
+					list = XMLList(items.((child("number_of_isotigs")).text().toUpperCase().indexOf(event.getSearchText().toUpperCase()) >=0 ));
+				}
+				
+				for each(var tempXML:XML in list){
+					var tempProtein:Protein = new Protein(tempXML);
+					results.push(tempProtein.id);
+				}
+				proteinsSearchBar.setResults(results); 				
+			}
+			protected function onGoToElementProtein(event:SearchBarEvent):void{				
+				var list:XMLList = XMLList(proteinsDataGrid.dataProvider);
+				var found:Boolean = false;
+				
+				for(var i:int=0;i<list.length() && !found;i++){
+					var tempProtein:Protein = new Protein(list[i]);
+					if(tempProtein.id == event.getSearchText()){
+						proteinsDataGrid.selectedIndex = i;	
+						proteinsDataGrid.scrollToIndex(i);
+						found = true;
+						proteinsDataGrid_itemClickHandler(null);
+					}
+				}	
 				
 			}
 			
