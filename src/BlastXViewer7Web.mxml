@@ -6,7 +6,7 @@
 			   implements="com.era7.communication.interfaces.ServerUploadable" 
 			   xmlns:search="com.era7.util.gui.search.*" backgroundColor="#3D3E3E">
 	<s:layout>
-		<s:VerticalLayout paddingLeft="10" paddingRight="10" paddingTop="10" paddingBottom="10"/>
+		<s:VerticalLayout paddingLeft="15" paddingRight="15" paddingTop="15" paddingBottom="15" gap="12"/>
 	</s:layout>
 	<fx:Declarations>
 		<!-- Define the menu data. -->		
@@ -36,6 +36,8 @@
 			import com.era7.communication.managers.UploadManager;
 			import com.era7.communication.xml.Request;
 			import com.era7.communication.xml.Response;
+			
+			import flash.net.navigateToURL;
 			
 			import mx.controls.Menu;
 			import mx.events.FlexEvent;
@@ -310,7 +312,13 @@
 
 			protected function helpButton_clickHandler(event:MouseEvent):void
 			{
-				// TODO Auto-generated method stub
+				navigateToURL(new URLRequest("https://s3-eu-west-1.amazonaws.com/pablo-tests/blastXViewer7Instructions.jpg"),"_blank");
+			}
+
+
+			protected function era7Logo_clickHandler(event:MouseEvent):void
+			{
+				navigateToURL(new URLRequest("http://www.era7bioinformatics.com"),"_blank");
 			}
 
 		]]>
@@ -320,16 +328,19 @@
 			  verticalAlign="middle" 
 			  paddingTop="0" 
 			  paddingBottom="0" paddingRight="0" paddingLeft="0">
-		<mx:Canvas width="200" 
+		<mx:Canvas 
 				   cornerRadius="15" 
 				   backgroundColor="#FFFFFF" 
-				   height="100%">
+				   height="100%" width="242">
 					<mx:SWFLoader id="era7Logo"
 						  source="{BlastViewerIconsManager.era7Icon}"
 						  buttonMode="true"
 						  mouseChildren="false"
 						  useHandCursor="true" 
-						  scaleContent="true" verticalCenter="0" left="10" right="10"/>
+						  scaleContent="true" 
+						  left="0" 
+						  top="10"
+						  click="era7Logo_clickHandler(event)"/>
 		</mx:Canvas>
 		
 		<mx:Canvas width="100%" 
@@ -338,9 +349,6 @@
 				   height="100%">
 			<mx:SWFLoader id="blastViewerLogo"
 				source="{BlastViewerIconsManager.blastXViewer7Icon}"
-				buttonMode="true"
-				mouseChildren="false"
-				useHandCursor="true" 
 				right="10" 
 				verticalCenter="0" 
 				height="60"/>			
