@@ -3,11 +3,20 @@
 			   xmlns:s="library://ns.adobe.com/flex/spark" 
 			   xmlns:mx="library://ns.adobe.com/flex/mx" 
 			   creationComplete="application1_creationCompleteHandler(event)"
-			   implements="com.era7.communication.interfaces.ServerUploadable" 
-			   xmlns:search="com.era7.util.gui.search.*" backgroundColor="#3D3E3E">
+			   implements="com.era7.communication.interfaces.ServerUploadable, com.era7.communication.interfaces.ServerCallable"			   
+			   xmlns:search="com.era7.util.gui.search.*" 
+			   backgroundColor="#3D3E3E" xmlns:gui="com.era7.util.gui.*">
 	<s:layout>
-		<s:VerticalLayout paddingLeft="15" paddingRight="15" paddingTop="15" paddingBottom="15" gap="12"/>
+		<s:VerticalLayout paddingLeft="15" 
+						  paddingRight="15" 
+						  paddingTop="15" 
+						  paddingBottom="15" 
+						  gap="12"/>
 	</s:layout>
+	<s:states>
+		<s:State name="State1"/>
+		<s:State name="LoadingState"/>
+	</s:states>
 	<fx:Declarations>
 		<!-- Define the menu data. -->		
 		<!--<fx:XML format="e4x" id="menuDataXML">
@@ -29,8 +38,12 @@
 			import com.era7.bioinfo.iso.BlastViewerIconsManager;
 			import com.era7.bioinfo.iso.comm.BlastMapper;
 			import com.era7.bioinfo.iso.comm.RequestList;
+			import com.era7.bioinfo.iso.comm.UrlManager;
+			import com.era7.bioinfo.gui.events.UrlEvent;
+			import com.era7.bioinfo.gui.EnterUrlTitleWindow;
 			import com.era7.bioinfo.xml.Protein;
 			import com.era7.bioinfo.xml.blast.Hsp;
+			import com.era7.communication.interfaces.ServerCallable;
 			import com.era7.communication.interfaces.ServerUploadable;
 			import com.era7.communication.managers.MainManager;
 			import com.era7.communication.managers.UploadManager;
@@ -40,6 +53,7 @@
 			
 			import flash.net.navigateToURL;
 			
+			import mx.controls.Alert;
 			import mx.controls.Menu;
 			import mx.events.FlexEvent;
 			import mx.events.ListEvent;
@@ -65,6 +79,11 @@
 			
 			
 			protected var blastMapper:BlastMapper = null;
+			
+			protected var urlTitleWindow:EnterUrlTitleWindow = null;
+			
+			public static const LOADING_STATE:String = "LoadingState"
+			public static const BASE_STATE:String = "State1";
 
 			
 			/**
@@ -73,11 +92,33 @@
 			protected function application1_creationCompleteHandler(event:FlexEvent):void
 			{
 				MainManager.DEBUG_MODE = false;
+				MainManager.ADD_SESSION_ID_TO_REQUEST = false;
+				MainManager.REQUEST_TIMEOUT = 3600;
+				//MainManager.SESSION_ID = "1";
 				
 				blastMapper = new BlastMapper();			
 				
 				proteinsSearchBar.addEventListener(SearchBarEvent.SEARCH,onSearchProtein);
 				proteinsSearchBar.addEventListener(SearchBarEvent.GO_TO_ELEMENT,onGoToElementProtein);
+				
+			}
+			
+			protected function initEnterUrlTitleWindow():void{
+				if(urlTitleWindow == null){
+					urlTitleWindow = EnterUrlTitleWindow(PopUpManager.createPopUp(this,EnterUrlTitleWindow,true));
+					urlTitleWindow.addEventListener(UrlEvent.URL_SELECTED, onUrlSelected);
+					PopUpManager.centerPopUp(urlTitleWindow);
+				}
+				PopUpManager.bringToFront(urlTitleWindow);
+				urlTitleWindow.visible = true;
+				
+			}
+			
+			protected function onUrlSelected(event:UrlEvent):void{							
+				
+				blastMapper.loadBlastFileFromUrlAndGetCoverageXML(event.getUrl(),this);
+				
+				this.currentState = LOADING_STATE;
 				
 			}
 			
@@ -317,6 +358,38 @@
 				
 			}
 			
+			/**
+			 * 	PROCESS SUCCESSFUL RESPONSE
+			 */
+			public function processSuccessfulResponse(response:Response):void{
+				
+				if(response.getMethod() == RequestList.LOAD_BLAST_FILE_FROM_URL_AND_GET_COVERAGE_XML_REQUEST){
+									
+					xml = XML(response.getContent().proteins[0]);
+					proteinsDataGrid.selectedIndex = 0;
+					proteinsDataGrid_itemClickHandler(null);
+					
+					this.currentState = BASE_STATE;
+					
+				}
+			}
+			/**
+			 * 	PROCESS ERROR RESPONSE
+			 */
+			public function processErrorResponse(response:Response):void{
+				Alert.show(response.getErrorItem().getDescription());
+				
+				this.currentState = BASE_STATE;
+			}
+			/**
+			 * 	PROCESS NO SESSION RESPONSE
+			 */
+			public function processNoSessionResponse(response:Response):void{}
+			/**
+			 * 	PROCESS REQUEST TIMEOUT
+			 */
+			public function processRequestTimeout(request:Request):void{}
+			
 			//----------------------------------------------------------------------------
 			//----------------------------------------------------------------------------
 			
@@ -362,6 +435,12 @@
 				navigateToURL(new URLRequest("http://www.era7bioinformatics.com"),"_blank");
 			}
 
+
+			protected function loadFileFromUrlButton_clickHandler(event:MouseEvent):void
+			{
+				initEnterUrlTitleWindow();
+			}
+
 		]]>
 	</fx:Script>
 	<s:HGroup height="80"  
@@ -400,24 +479,33 @@
 			 paddingTop="10" 
 			 paddingRight="10" 
 			 paddingBottom="10" 
-			 backgroundColor="#E6E6E6" width="100%" height="100%">
+			 backgroundColor="#E6E6E6" width="100%" height="100%" 
+			 enabled.LoadingState="true" verticalAlign.LoadingState="middle" horizontalAlign.LoadingState="center">
 		<s:HGroup width="100%"
-				  id="menuHGroup">
+				  id="menuHGroup" includeIn="State1">
 			<mx:SWFLoader id="uploadFileButton"
-					  source="{BlastViewerIconsManager.loadFileButton}"
+					  source="{IconsManager.loadFileButton}"
 					  click="uploadFileButton_clickHandler(event)"
 					  buttonMode="true"
 					  mouseChildren="false"
-					  useHandCursor="true" height="35"/>
+					  useHandCursor="true" 
+					  height="35"/>
+			<mx:SWFLoader id="loadFileFromUrlButton"
+						  source="{IconsManager.loadFileFromUrlButton}"
+						  click="loadFileFromUrlButton_clickHandler(event)"
+						  buttonMode="true"
+						  mouseChildren="false"
+						  useHandCursor="true" 
+						  height="35"/>
 			<mx:SWFLoader id="helpButton"
 					  source="{BlastViewerIconsManager.helpButton}"
 					  click="helpButton_clickHandler(event)"
 					  buttonMode="true"
 					  mouseChildren="false"
-					  useHandCursor="true" height="35"/>
-		</s:HGroup>
-				  
-		<mx:HDividedBox label="Contigs" width="100%" height="100%">
+					  useHandCursor="true" 
+					  height="35"/>
+		</s:HGroup>				  
+		<mx:HDividedBox label="Contigs" width="100%" height="100%" includeIn="State1">
 			<mx:VBox  width="45%" height="100%">
 				<mx:HBox width="100%" verticalAlign="middle" paddingLeft="5" paddingRight="5" 
 						 paddingTop="5" paddingBottom="5">
@@ -536,5 +624,7 @@
 				</mx:VDividedBox>					
 			</mx:VBox>									
 		</mx:HDividedBox>	
+		<mx:SWFLoader includeIn="LoadingState" 
+				source="{IconsManager.loadingSWF}"/>
 	</mx:VBox>			
 </s:Application>
